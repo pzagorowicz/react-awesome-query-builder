@@ -44,6 +44,16 @@ export const setValue = (config, path, delta, value, valueType, asyncListValues,
   config: config,
   __isInternal: __isInternal
 });
+export const setLhsValue = (config, path, delta, value, valueType, asyncListValues, __isInternal) => ({
+  type: constants.SET_LHS_VALUE,
+  path: toImmutableList(path),
+  delta: delta,
+  value: value,
+  valueType: valueType,
+  asyncListValues: asyncListValues,
+  config: config,
+  __isInternal: __isInternal
+});
 
 /**
  * @param {object} config
@@ -53,6 +63,19 @@ export const setValue = (config, path, delta, value, valueType, asyncListValues,
  */
 export const setValueSrc = (config, path, delta, srcKey) => ({
   type: constants.SET_VALUE_SRC,
+  path: toImmutableList(path),
+  delta: delta,
+  srcKey: srcKey,
+  config: config
+});
+/**
+ * @param {object} config
+ * @param {Immutable.List} path
+ * @param {integer} delta
+ * @param {*} srcKey
+ */
+export const setLhsValueSrc = (config, path, delta, srcKey) => ({
+  type: constants.SET_LHS_VALUE_SRC,
   path: toImmutableList(path),
   delta: delta,
   srcKey: srcKey,

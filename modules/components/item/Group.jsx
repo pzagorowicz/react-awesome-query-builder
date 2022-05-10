@@ -224,7 +224,8 @@ export class BasicGroup extends PureComponent {
   renderItem(item) {
     const props = this.props;
     const {config, actions, onDragStart, isLocked} = props;
-    const isRuleGroup = item.get("type") == "group" && item.getIn(["properties", "field"]) != null;
+    // Check left-hand side value instead of "field"
+    const isRuleGroup = item.get("type") == "group" && item.getIn(["properties", "lhsValue"]) != null;
     const type = isRuleGroup ? "rule_group" : item.get("type");
     
     return (

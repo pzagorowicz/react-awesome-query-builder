@@ -78,7 +78,8 @@ class Rule extends PureComponent {
     const showDragIcon = config.settings.canReorder && reordableNodesCnt > 1 && !isLocked;
     const showOperator = selectedField && !hideOperator;
     const showOperatorLabel = selectedField && hideOperator && selectedFieldWidgetConfig.operatorInlineLabel;
-    const showWidget = isFieldAndOpSelected;
+    // show widget when operator is selected regardless of field (it can be null)
+    const showWidget = selectedOperator && !isSelectedGroup;
     const showOperatorOptions = isFieldAndOpSelected && selectedOperatorHasOptions;
 
     return {
@@ -140,20 +141,36 @@ class Rule extends PureComponent {
     } = this.meta;
     const { immutableOpsMode } = config.settings;
 
+    const selectedField = this.getSelectedField();
+    const lhsValueType = this.props.lhsValueType?.get('0') || null;
+
     return <OperatorWrapper
       key="operator"
       config={config}
-      selectedField={this.props.selectedField}
+      // selected field in left-hand side operand
+      selectedField={selectedField}
       selectedOperator={this.props.selectedOperator}
       setOperator={!immutableOpsMode ? this.props.setOperator : dummyFn}
       selectedFieldPartsLabels={selectedFieldPartsLabels}
-      showOperator={showOperator}
+      // showOperator={showOperator}
+      showOperator={selectedField || lhsValueType}
       showOperatorLabel={showOperatorLabel}
       selectedFieldWidgetConfig={selectedFieldWidgetConfig}
       readonly={immutableOpsMode || isLocked}
       id={this.props.id}
       groupId={this.props.groupId}
+      lhsValueType={lhsValueType}
     />;
+  }
+
+  getSelectedField() {
+    const lhsValueSrc = this.props.lhsValueSrc.get(0);
+
+    if (lhsValueSrc === "field") {
+      return this.props.lhsValue.get(0);
+    }
+
+    return null;
   }
 
   renderWidget() {
@@ -162,9 +179,12 @@ class Rule extends PureComponent {
     const { immutableValuesMode } = config.settings;
     if (!showWidget) return null;
 
+    const field = this.getSelectedField() || "Dummy"; // TODO PZ: get rid out of "Dummy"
+
     const widget = <Widget
       key="values"
-      field={this.props.selectedField}
+      // pass current field selected in left-hand side operand
+      field={field}
       parentField={this.props.parentField}
       operator={this.props.selectedOperator}
       value={this.props.value}
@@ -177,10 +197,46 @@ class Rule extends PureComponent {
       readonly={immutableValuesMode || isLocked}
       id={this.props.id}
       groupId={this.props.groupId}
+      // indicate that Widget is being used in right-hand side operand
+      isLhs={false}
+      // pass value type of left-hand side operand
+      lhsValueType={this.props.lhsValueType.get(0)}
     />;
 
     return (
       <Col key={"widget-for-"+this.props.selectedOperator} className="rule--value">
+        {widget}
+      </Col>
+    );
+  }
+
+  renderLhsWidget() {
+    const {config, lhsValueError, isLocked} = this.props;
+    const { immutableValuesMode } = config.settings;
+
+    const field = this.getSelectedField() || this.props.selectedField;
+
+    const widget = <Widget
+      key="LHSvalues"
+      // pass current field selected in left-hand side operand
+      field={field}
+      parentField={this.props.parentField}
+      operator={this.props.selectedOperator || "equal"}
+      value={this.props.lhsValue}
+      valueSrc={this.props.lhsValueSrc}
+      asyncListValues={this.props.asyncListValues}
+      valueError={lhsValueError}
+      config={config}
+      setValue={!immutableValuesMode ? this.props.setLhsValue : dummyFn}
+      setValueSrc={!immutableValuesMode ? this.props.setLhsValueSrc : dummyFn}
+      readonly={immutableValuesMode || isLocked}
+      id={this.props.id}
+      groupId={this.props.groupId}
+      isLhs
+    />;
+
+    return (
+      <Col key={"lhs-widget-for-"+this.props.selectedOperator} className="rule--value">
         {widget}
       </Col>
     );
@@ -285,7 +341,8 @@ class Rule extends PureComponent {
     const { renderButtonGroup: BtnGrp } = config.settings;
 
     const parts = [
-      this.renderField(),
+      // render Widget instead of field
+      this.renderLhsWidget(),
       this.renderOperator(),
       this.renderBeforeWidget(),
       this.renderWidget(),

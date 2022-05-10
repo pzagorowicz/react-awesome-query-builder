@@ -16,12 +16,13 @@ export default class ValueField extends PureComponent {
     groupId: PropTypes.string,
     setValue: PropTypes.func.isRequired,
     config: PropTypes.object.isRequired,
-    field: PropTypes.string.isRequired,
+    field: PropTypes.string,
     value: PropTypes.string,
     operator: PropTypes.string,
     customProps: PropTypes.object,
     readonly: PropTypes.bool,
     parentField: PropTypes.string,
+    lhsValueType: PropTypes.string,
   };
 
   constructor(props) {
@@ -46,14 +47,14 @@ export default class ValueField extends PureComponent {
     }
   }
 
-  getItems({config, field, operator, parentField, isFuncArg, fieldDefinition}) {
+  getItems({config, field, operator, parentField, isFuncArg, fieldDefinition, isLhs, lhsValueType}) {
     const {canCompareFieldWithField} = config.settings;
     const fieldSeparator = config.settings.fieldSeparator;
     const parentFieldPath = typeof parentField == "string" ? parentField.split(fieldSeparator) : parentField;
     const parentFieldConfig = parentField ? getFieldConfig(config, parentField) : null;
     const sourceFields = parentField ? parentFieldConfig && parentFieldConfig.subfields : config.fields;
 
-    const filteredFields = this.filterFields(config, sourceFields, field, parentField, parentFieldPath, operator, canCompareFieldWithField, isFuncArg, fieldDefinition);
+    const filteredFields = this.filterFields(config, sourceFields, field, parentField, parentFieldPath, operator, canCompareFieldWithField, isFuncArg, fieldDefinition, isLhs, lhsValueType);
     const items = this.buildOptions(parentFieldPath, config, filteredFields, parentFieldPath);
     return items;
   }
@@ -64,7 +65,7 @@ export default class ValueField extends PureComponent {
     const isFieldSelected = !!value;
 
     const leftFieldConfig = getFieldConfig(config, field);
-    const leftFieldWidgetField = leftFieldConfig.widgets.field;
+    const leftFieldWidgetField = leftFieldConfig?.widgets?.field;
     const leftFieldWidgetFieldProps = leftFieldWidgetField && leftFieldWidgetField.widgetProps || {};
     const placeholder = isFieldSelected ? null 
       : (isFuncArg && customPlaceholder || leftFieldWidgetFieldProps.valuePlaceholder || fieldPlaceholder);
@@ -86,7 +87,7 @@ export default class ValueField extends PureComponent {
     };
   }
 
-  filterFields(config, fields, leftFieldFullkey, parentField, parentFieldPath, operator, canCompareFieldWithField, isFuncArg, fieldDefinition) {
+  filterFields(config, fields, leftFieldFullkey, parentField, parentFieldPath, operator, canCompareFieldWithField, isFuncArg, fieldDefinition, isLhs, lhsValueType) {
     fields = clone(fields);
     const fieldSeparator = config.settings.fieldSeparator;
     const leftFieldConfig = getFieldConfig(config, leftFieldFullkey);
@@ -96,11 +97,11 @@ export default class ValueField extends PureComponent {
       expectedType = fieldDefinition.type;
     } else if (widget) {
       let widgetConfig = config.widgets[widget];
-      let widgetType = widgetConfig.type;
+      let widgetType = widgetConfig?.type;
       //expectedType = leftFieldConfig.type;
       expectedType = widgetType;
     } else {
-      expectedType = leftFieldConfig.type;
+      expectedType = leftFieldConfig?.type;
     }
     
     function _filter(list, path) {
@@ -117,6 +118,14 @@ export default class ValueField extends PureComponent {
         } else {
           // tip: LHS field can be used as arg in RHS function
           let canUse = rightFieldConfig.type == expectedType && (isFuncArg ? true : rightFieldFullkey != leftFieldFullkey);
+
+          if (isLhs) {
+            canUse = (canUse || !isFuncArg) && rightFieldKey !== "Dummy"; // TODO PZ: get rid out of "Dummy"
+          } else {
+            // RHS - compare to lhsValueType
+            canUse = (rightFieldConfig.type == lhsValueType) && rightFieldKey !== "Dummy"; // TODO PZ: get rid out of "Dummy"
+          }
+
           let fn = canCompareFieldWithField || config.settings.canCompareFieldWithField;
           if (fn)
             canUse = canUse && fn(leftFieldFullkey, leftFieldConfig, rightFieldFullkey, rightFieldConfig, operator);

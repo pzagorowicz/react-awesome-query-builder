@@ -68,6 +68,14 @@ const createRuleContainer = (Rule) =>
       this.props.actions.setValueSrc(this.props.path, delta, srcKey);
     };
 
+    setLhsValue = (delta, value, type, asyncListValues, __isInternal) => {
+      this.props.actions.setLhsValue(this.props.path, delta, value, type, asyncListValues, __isInternal);
+    };
+
+    setLhsValueSrc = (delta, srcKey) => {
+      this.props.actions.setLhsValueSrc(this.props.path, delta, srcKey);
+    };
+
     shouldComponentUpdate(nextProps, nextState) {
       let prevProps = this.props;
       let prevState = this.state;
@@ -105,6 +113,9 @@ const createRuleContainer = (Rule) =>
       const oneValueError = valueError && valueError.toArray().filter(e => !!e).shift() || null;
       const hasError = oneValueError != null && showErrorMessage;
 
+      const lhsValueSrc = this.props.lhsValueSrc.get(0);
+      const selectedField = lhsValueSrc === "field" && this.props.lhsValue.get(0) || this.props.field;
+
       return (
         <div
           className={classNames("group-or-rule-container", "rule-container", hasError ? "rule-with-error" : null)}
@@ -125,7 +136,7 @@ const createRuleContainer = (Rule) =>
               removeSelf={this.dummyFn}
               setValue={this.dummyFn}
               setValueSrc={this.dummyFn}
-              selectedField={this.props.field || null}
+              selectedField={selectedField || null}
               parentField={this.props.parentField || null}
               selectedOperator={this.props.operator || null}
               value={this.props.value || null}
@@ -155,7 +166,7 @@ const createRuleContainer = (Rule) =>
               setOperatorOption={isInDraggingTempo ? this.dummyFn : this.setOperatorOption}
               setValue={isInDraggingTempo ? this.dummyFn : this.setValue}
               setValueSrc={isInDraggingTempo ? this.dummyFn : this.setValueSrc}
-              selectedField={this.props.field || null}
+              selectedField={selectedField || null}
               parentField={this.props.parentField || null}
               selectedOperator={this.props.operator || null}
               value={this.props.value || null}
@@ -169,6 +180,13 @@ const createRuleContainer = (Rule) =>
               isLocked={this.props.isLocked}
               isTrueLocked={this.props.isTrueLocked}
               parentReordableNodesCnt={this.props.parentReordableNodesCnt}
+              // lhs
+              lhsValue={this.props.lhsValue || null}
+              lhsValueSrc={this.props.lhsValueSrc || null}
+              lhsValueError={this.props.lhsValueError || null}
+              lhsValueType={this.props.lhsValueType || null}
+              setLhsValue={isInDraggingTempo ? this.dummyFn : this.setLhsValue}
+              setLhsValueSrc={isInDraggingTempo ? this.dummyFn : this.setLhsValueSrc}
             />
           ]}
         </div>
