@@ -434,14 +434,17 @@ const setOperator = (state, path, newOperator, config) => {
 
   const properties = state.getIn(expandTreePath(path, "properties"));
   const children = state.getIn(expandTreePath(path, "children1"));
-  const currentField = properties.get("field");
+  // current field can be null now - LHS value src can be either value, field or function
+  const lhsValueSrc = properties.get("lhsValueSrc").get(0);
+  const currentField = lhsValueSrc === "field" && properties.get("lhsValue").get(0) || null;
   const fieldConfig = getFieldConfig(config, currentField);
-  const isRuleGroup = fieldConfig.type == "!group";
+  const isRuleGroup = fieldConfig?.type == "!group";
   const operatorConfig = getOperatorConfig(config, newOperator, currentField);
   const operatorCardinality = operatorConfig ? defaultValue(operatorConfig.cardinality, 1) : null;
 
   state = state.updateIn(expandTreePath(path, "properties"), (map) => map.withMutations((current) => {
-    const currentField = current.get("field");
+    // current field can be null now - LHS value src can be either value, field or function
+    const currentField = lhsValueSrc === "field" && properties.get("lhsValue").get(0) || null;
     const currentOperatorOptions = current.get("operatorOptions");
     const _currentValue = current.get("value", new Immutable.List());
     const _currentValueSrc = current.get("valueSrc", new Immutable.List());
@@ -565,6 +568,85 @@ const setValue = (state, path, delta, value, valueType, config, asyncListValues,
   return {tree: state, isInternalValueChange};
 };
 
+// this is a copy of setValue function witch changes required for LHS
+const setLhsValue = (state, path, delta, value, valueType, config, asyncListValues, __isInternal) => {
+  const {fieldSeparator, showErrorMessage} = config.settings;
+  let isInternalValueChange;
+  const valueSrc = state.getIn(expandTreePath(path, "properties", "lhsValueSrc", delta + "")) || null;
+  if (valueSrc === "field" && Array.isArray(value))
+    value = value.join(fieldSeparator);
+
+  const field = state.getIn(expandTreePath(path, "properties", "field")) || null;
+  const operator = state.getIn(expandTreePath(path, "properties", "operator")) || null;
+  const operatorConfig = getOperatorConfig(config, operator, field);
+  const operatorCardinality = operator ? defaultValue(operatorConfig.cardinality, 1) : null;
+
+  const isEndValue = false;
+  const canFix = false;
+  const calculatedValueType = valueType || calculateValueType(value, valueSrc, config);
+  const [validateError, fixedValue] = validateValue(
+    config, field, field, operator, value, calculatedValueType, valueSrc, asyncListValues, canFix, isEndValue
+  );
+    
+  const isValid = !validateError;
+  if (isValid && fixedValue !== value) {
+    // eg, get exact value from listValues (not string)
+    value = fixedValue;
+  }
+
+  // Additional validation for range values
+  if (showErrorMessage) {
+    const w = getWidgetForFieldOp(config, field, operator, valueSrc);
+    const fieldWidgetDefinition = getFieldWidgetConfig(config, field, operator, w, valueSrc);
+    const valueSrcs = Array.from({length: operatorCardinality}, (_, i) => (state.getIn(expandTreePath(path, "properties", "lhsValueSrc", i + "")) || null));
+        
+    if (operatorConfig && operatorConfig.validateValues && valueSrcs.filter(vs => vs == "lhsValue" || vs == null).length == operatorCardinality) {
+      const values = Array.from({length: operatorCardinality}, (_, i) => (i == delta ? value : state.getIn(expandTreePath(path, "properties", "lhsValue", i + "")) || null));
+      const jsValues = fieldWidgetDefinition && fieldWidgetDefinition.toJS ? values.map(v => fieldWidgetDefinition.toJS(v, fieldWidgetDefinition)) : values;
+      const rangeValidateError = operatorConfig.validateValues(jsValues);
+
+      state = state.setIn(expandTreePath(path, "properties", "lhsValueError", operatorCardinality), rangeValidateError);
+    }
+  }
+  
+  const lastValueArr = state.getIn(expandTreePath(path, "properties", "lhsValue"));
+  if (!lastValueArr) {
+    state = state
+      .setIn(expandTreePath(path, "properties", "lhsValue"), new Immutable.List(new Array(operatorCardinality)))
+      .setIn(expandTreePath(path, "properties", "lhsValueType"), new Immutable.List(new Array(operatorCardinality)))
+      .setIn(expandTreePath(path, "properties", "lhsValueError"), new Immutable.List(new Array(operatorCardinality)));
+  }
+
+  const lastValue = state.getIn(expandTreePath(path, "properties", "lhsValue", delta + ""));
+  const lastError = state.getIn(expandTreePath(path, "properties", "lhsValueError", delta));
+  const isLastEmpty = lastValue == undefined;
+  const isLastError = !!lastError;
+  if (isValid || showErrorMessage) {
+    state = state.deleteIn(expandTreePath(path, "properties", "asyncListValues"));
+    // set only good value
+    if (typeof value === "undefined") {
+      state = state.setIn(expandTreePath(path, "properties", "lhsValue", delta + ""), undefined);
+      state = state.setIn(expandTreePath(path, "properties", "lhsValueType", delta + ""), null);
+    } else {
+      if (asyncListValues) {
+        state = state.setIn(expandTreePath(path, "properties", "asyncListValues"), asyncListValues);
+      }
+      state = state.setIn(expandTreePath(path, "properties", "lhsValue", delta + ""), value);
+      state = state.setIn(expandTreePath(path, "properties", "lhsValueType", delta + ""), calculatedValueType);
+      isInternalValueChange = __isInternal && !isLastEmpty && !isLastError;
+    }
+  }
+  if (showErrorMessage) {
+    state = state.setIn(expandTreePath(path, "properties", "lhsValueError", delta), validateError);
+  }
+  if (__isInternal && (isValid && isLastError || !isValid && !isLastError)) {
+    state = state.setIn(expandTreePath(path, "properties", "lhsValueError", delta), validateError);
+    isInternalValueChange = false;
+  }
+  
+  return {tree: state, isInternalValueChange};
+};
+
 /**
  * @param {Immutable.Map} state
  * @param {Immutable.List} path
@@ -611,6 +693,36 @@ const setValueSrc = (state, path, delta, srcKey, config) => {
       state = state.setIn(expandTreePath(path, "properties", "value", delta + ""), newValue.get(delta));
       state = state.setIn(expandTreePath(path, "properties", "valueType", delta + ""), newValueType.get(delta));
     }
+  }
+
+  return state;
+};
+
+// this is a copy of setValueSrc function witch changes required for LHS
+/**
+ * @param {Immutable.Map} state
+ * @param {Immutable.List} path
+ * @param {integer} delta
+ * @param {*} srcKey
+ */
+ const setLhsValueSrc = (state, path, delta, srcKey, config) => {
+  const {showErrorMessage} = config.settings;
+
+  state = state.setIn(expandTreePath(path, "properties", "lhsValue", delta + ""), undefined);
+  state = state.setIn(expandTreePath(path, "properties", "lhsValueType", delta + ""), null);
+  state = state.deleteIn(expandTreePath(path, "properties", "asyncListValues"));
+
+  if (showErrorMessage) {
+    // clear value error
+    state = state.setIn(expandTreePath(path, "properties", "lhsValueError", delta), null);
+
+  }
+  
+  // set valueSrc
+  if (typeof srcKey === "undefined") {
+    state = state.setIn(expandTreePath(path, "properties", "lhsValueSrc", delta + ""), null);
+  } else {
+    state = state.setIn(expandTreePath(path, "properties", "lhsValueSrc", delta + ""), srcKey);
   }
 
   return state;
@@ -777,9 +889,23 @@ export default (config) => {
       set.tree = tree;
       break;
     }
+    
+    case constants.SET_LHS_VALUE: {
+      const {tree, isInternalValueChange} = setLhsValue(
+        state.tree, action.path, action.delta, action.value, action.valueType, action.config, action.asyncListValues, action.__isInternal
+      );
+      set.__isInternalValueChange = isInternalValueChange;
+      set.tree = tree;
+      break;
+    }
 
     case constants.SET_VALUE_SRC: {
       set.tree = setValueSrc(state.tree, action.path, action.delta, action.srcKey, action.config);
+      break;
+    }
+
+    case constants.SET_LHS_VALUE_SRC: {
+      set.tree = setLhsValueSrc(state.tree, action.path, action.delta, action.srcKey, action.config);
       break;
     }
 

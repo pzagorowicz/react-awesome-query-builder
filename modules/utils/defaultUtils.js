@@ -44,24 +44,29 @@ export const defaultRuleProperties = (config, parentRuleGroupPath = null, item =
     field = defaultField(config, true, parentRuleGroupPath);
     operator = defaultOperator(config, field);
   }
+  const defaultValueSource = "value";
   let current = new Immutable.Map({
-    field: field,
     operator: operator,
     value: new Immutable.List(),
     valueSrc: new Immutable.List(),
+    lhsValue: new Immutable.List(),
+    lhsValueSrc: new Immutable.List([defaultValueSource]),
+    lhsValueType: new Immutable.List(),
     //used for complex operators like proximity
     operatorOptions: defaultOperatorOptions(config, operator, field),
   });
   if (showErrorMessage) {
-    current = current.set("valueError", new Immutable.List());
+    current = current
+      .set("valueError", new Immutable.List())
+      .set("lhsValueError", new Immutable.List())
   }
   
-  if (field && operator) {
+  if (field && operator) { // TODO PZ: field is possibly always null now
     let {newValue, newValueSrc, newValueType, newValueError} = getNewValueForFieldOp(config, config, current, field, operator, "operator", false);
     current = current
       .set("value", newValue)
       .set("valueSrc", newValueSrc)
-      .set("valueType", newValueType);
+      .set("valueType", newValueType)
     if (showErrorMessage) {
       current = current
         .set("valueError", newValueError);

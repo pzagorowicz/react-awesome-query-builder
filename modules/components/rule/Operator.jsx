@@ -17,6 +17,7 @@ export default class Operator extends PureComponent {
     readonly: PropTypes.bool,
     //actions
     setOperator: PropTypes.func.isRequired,
+    lhsValueType: PropTypes.string,
   };
 
   constructor(props) {
@@ -28,7 +29,8 @@ export default class Operator extends PureComponent {
 
   onPropsChanged(nextProps) {
     const prevProps = this.props;
-    const keysForMeta = ["config", "selectedField", "selectedOperator"];
+    // update meta also when lhsValueType changes
+    const keysForMeta = ["config", "selectedField", "selectedOperator", "lhsValueType"];
     const needUpdateMeta = !this.meta || keysForMeta.map(k => (nextProps[k] !== prevProps[k])).filter(ch => ch).length > 0;
 
     if (needUpdateMeta) {
@@ -36,9 +38,15 @@ export default class Operator extends PureComponent {
     }
   }
 
-  getMeta({config, selectedField, selectedOperator}) {
+  // returns operators from config according to left-hand side operand type
+  getOperatorsForFunction(lhsValueType, config) {
+    return config.types[lhsValueType].operators;
+  }
+
+  getMeta({config, selectedField, selectedOperator, lhsValueType}) {
     const fieldConfig = getFieldConfig(config, selectedField);
-    const operators = fieldConfig?.operators;
+    // when no field is selected (e.g. when function is selected as value source in LHS), get operators according to left-hand side value type
+    const operators = fieldConfig?.operators || this.getOperatorsForFunction(lhsValueType, config);
     const operatorOptions 
       = mapValues(
         pickBy(

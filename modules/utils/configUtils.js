@@ -335,8 +335,11 @@ export const getOperatorConfig = (config, operator, field = null) => {
 };
 
 export const getFieldWidgetConfig = (config, field, operator, widget = null, valueSrc = null) => {
-  if (!field)
-    return null;
+  if (!field){
+    // field can be null now but we still want to display widget for LHS.
+    // in this case instead of returning null set widget to valueSrc or to "field" by default
+    widget = valueSrc === "value" ? "text" : valueSrc; // this is default widget to display when field is not selected yet
+  }
   if (!(operator || widget) && valueSrc != "const" && field != "!case_value")
     return null;
   const fieldConfig = getFieldConfig(config, field);

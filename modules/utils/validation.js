@@ -1,7 +1,7 @@
 import {
   getFieldConfig, getOperatorConfig, getFieldWidgetConfig, getFuncConfig,
 } from "./configUtils";
-import {getOperatorsForField, getWidgetForFieldOp, getNewValueForFieldOp} from "../utils/ruleUtils";
+import {getOperatorsForField, getWidgetForFieldOp, getNewValueForFieldOp, getOperatorsForType} from "../utils/ruleUtils";
 import {defaultValue, deepEqual, getItemInListValues, logger} from "../utils/stuff";
 import {defaultOperatorOptions} from "../utils/defaultUtils";
 import omit from "lodash/omit";
@@ -86,12 +86,18 @@ function validateRule (item, path, itemId, meta, c) {
   const {showErrorMessage} = config.settings;
   let id = item.get("id");
   let properties = item.get("properties");
-  let field = properties.get("field") || null;
+  // let field = properties.get("field") || null;
   let operator = properties.get("operator") || null;
   let operatorOptions = properties.get("operatorOptions");
   let valueSrc = properties.get("valueSrc");
   let value = properties.get("value");
   let valueError = properties.get("valueError");
+  // LHS
+  const lhsValueSrc = properties.get("lhsValueSrc").get(0);
+  const lhsValueType = properties.get("lhsValueType").get(0);
+  const lhsValue = properties.get("lhsValue").get(0);
+  let field = lhsValueSrc === 'field' && lhsValue || null;
+
   const oldSerialized = {
     field,
     operator,
@@ -114,10 +120,11 @@ function validateRule (item, path, itemId, meta, c) {
     logger.warn(`No config for field ${field}`);
     field = null;
   }
-  if (field == null) {
-    properties = ["operator", "operatorOptions", "valueSrc", "value"].reduce((map, key) => map.delete(key), properties);
-    operator = null;
-  }
+  // TODO PZ: fix validation
+  // if (field == null) {
+  //   properties = ["operator", "operatorOptions", "valueSrc", "value"].reduce((map, key) => map.delete(key), properties);
+  //   operator = null;
+  // }
 
   //validate operator
   // Backward compatibility: obsolete operator range_between
@@ -131,7 +138,7 @@ function validateRule (item, path, itemId, meta, c) {
     console.warn(`No config for operator ${operator}`);
     operator = null;
   }
-  const availOps = field ? getOperatorsForField(config, field) : [];
+  const availOps = field ? getOperatorsForField(config, field) : getOperatorsForType(config, lhsValueType) || [];
   if (!availOps) {
     console.warn(`Type of field ${field} is not supported`);
     operator = null;
@@ -163,18 +170,19 @@ function validateRule (item, path, itemId, meta, c) {
     properties = properties.set("operatorOptions", operatorOptions);
   }
 
+  // TODO PZ: fix validation
   //validate values
-  valueSrc = properties.get("valueSrc");
-  value = properties.get("value");
-  let {newValue, newValueSrc, newValueError} = getNewValueForFieldOp(config, oldConfig, properties, field, operator, null, true);
-  value = newValue;
-  valueSrc = newValueSrc;
-  valueError = newValueError;
-  properties = properties.set("value", value);
-  properties = properties.set("valueSrc", valueSrc);
-  if (showErrorMessage) {
-    properties = properties.set("valueError", valueError);
-  }
+  // valueSrc = properties.get("valueSrc");
+  // value = properties.get("value");
+  // let {newValue, newValueSrc, newValueError} = getNewValueForFieldOp(config, oldConfig, properties, field, operator, null, true);
+  // value = newValue;
+  // valueSrc = newValueSrc;
+  // valueError = newValueError;
+  // properties = properties.set("value", value);
+  // properties = properties.set("valueSrc", valueSrc);
+  // if (showErrorMessage) {
+  //   properties = properties.set("valueError", valueError);
+  // }
 
   const newSerialized = {
     field,

@@ -17,7 +17,7 @@ export default class FuncSelect extends PureComponent {
     id: PropTypes.string,
     groupId: PropTypes.string,
     config: PropTypes.object.isRequired,
-    field: PropTypes.string.isRequired,
+    field: PropTypes.string,
     operator: PropTypes.string,
     customProps: PropTypes.object,
     value: PropTypes.string,
@@ -48,9 +48,9 @@ export default class FuncSelect extends PureComponent {
     }
   }
 
-  getItems({config, field, operator, parentFuncs}) {
+  getItems({config, field, operator, parentFuncs, isLhs}) {
     const {canUseFuncForField} = config.settings;
-    const filteredFuncs = this.filterFuncs(config, config.funcs, field, operator, canUseFuncForField, parentFuncs);
+    const filteredFuncs = this.filterFuncs(config, config.funcs, field, operator, canUseFuncForField, parentFuncs, isLhs);
     const items = this.buildOptions(config, filteredFuncs);
     return items;
   }
@@ -61,7 +61,7 @@ export default class FuncSelect extends PureComponent {
     const isFuncSelected = !!value;
 
     const leftFieldConfig = getFieldConfig(config, field);
-    const leftFieldWidgetField = leftFieldConfig.widgets.field;
+    const leftFieldWidgetField = leftFieldConfig?.widgets?.field;
     const leftFieldWidgetFieldProps = leftFieldWidgetField && leftFieldWidgetField.widgetProps || {};
     const placeholder = !isFuncSelected ? funcPlaceholder : null;
 
@@ -82,7 +82,7 @@ export default class FuncSelect extends PureComponent {
     };
   }
 
-  filterFuncs(config, funcs, leftFieldFullkey, operator, canUseFuncForField, parentFuncs) {
+  filterFuncs(config, funcs, leftFieldFullkey, operator, canUseFuncForField, parentFuncs, isLhs) {
     funcs = clone(funcs);
     const fieldSeparator = config.settings.fieldSeparator;
     const leftFieldConfig = getFieldConfig(config, leftFieldFullkey);
@@ -108,7 +108,9 @@ export default class FuncSelect extends PureComponent {
             delete list[funcKey];
         } else {
           let canUse = funcConfig.returnType == expectedType;
-          if (leftFieldConfig.funcs)
+          // when it is left-hand side operand, each function can be used
+          canUse = isLhs || canUse;
+          if (leftFieldConfig?.funcs)
             canUse = canUse && leftFieldConfig.funcs.includes(funcFullkey);
           if (canUseFuncForField)
             canUse = canUse && canUseFuncForField(leftFieldFullkey, leftFieldConfig, funcFullkey, funcConfig, operator);

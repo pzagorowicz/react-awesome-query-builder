@@ -15,7 +15,7 @@ export default class FuncWidget extends PureComponent {
     id: PropTypes.string,
     groupId: PropTypes.string,
     config: PropTypes.object.isRequired,
-    field: PropTypes.string.isRequired,
+    field: PropTypes.string,
     operator: PropTypes.string,
     customProps: PropTypes.object,
     value: PropTypes.object, //instanceOf(Immutable.Map) //with keys 'func' and `args`
@@ -42,7 +42,7 @@ export default class FuncWidget extends PureComponent {
   }
 
   getMeta({config, field, operator, value}) {
-    const funcKey = value ? value.get("func") : null;
+    const funcKey = value && value.get ? value.get("func") : null;
     const funcDefinition = funcKey ? getFuncConfig(config, funcKey) : null;
 
     return {
@@ -73,13 +73,13 @@ export default class FuncWidget extends PureComponent {
   };
 
   renderFuncSelect = () => {
-    const {config, field, operator, customProps, value, readonly, parentFuncs, id, groupId} = this.props;
-    const funcKey = value ? value.get("func") : null;
+    const {config, field, operator, customProps, value, readonly, parentFuncs, id, groupId, isLhs} = this.props;
+    const funcKey = value && value.get ? value.get("func") : null;
     const selectProps = {
       value: funcKey,
       setValue: this.setFunc,
       config, field, operator, customProps, readonly, parentFuncs,
-      id, groupId,
+      id, groupId, isLhs
     };
     const {showLabels, funcLabel} = config.settings;
     const widgetLabel = showLabels
@@ -121,7 +121,7 @@ export default class FuncWidget extends PureComponent {
   };
 
   renderArgVal = (funcKey, argKey, argDefinition) => {
-    const {config, field, operator, value, readonly, parentFuncs, id, groupId} = this.props;
+    const {config, field, operator, value, readonly, parentFuncs, id, groupId, isLhs, lhsValueType} = this.props;
     const arg = value ? value.getIn(["args", argKey]) : null;
     const argVal = arg ? arg.get("value") : undefined;
     const defaultValueSource = argDefinition.valueSources.length == 1 ? argDefinition.valueSources[0] : undefined;
@@ -144,6 +144,8 @@ export default class FuncWidget extends PureComponent {
       parentFuncs,
       id,
       groupId,
+      isLhs,
+      lhsValueType,
     };
     //tip: value & valueSrc will be converted to Immutable.List at <Widget>
 

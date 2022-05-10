@@ -192,6 +192,14 @@ export const getOperatorsForField = (config, field) => {
   return fieldOps;
 };
 
+export const getOperatorsForType = (config, type) => {
+  const configType = type && config.types[type]
+  
+  if (configType) {
+    return configType.operators;
+  }
+}
+
 export const getFirstOperator = (config, field) => {
   const fieldOps = getOperatorsForField(config, field);
   return fieldOps ? fieldOps[0] : null;
@@ -296,10 +304,15 @@ export const getValueLabel = (config, field, operator, delta, valueSrc = null, i
 };
 
 function _getWidgetsAndSrcsForFieldOp (config, field, operator = null, valueSrc = null) {
+  if (!field) {    
+    return {
+      widgets: ["field", "func"], // TODO PZ: not sure about this
+      valueSrcs: ["value", "field", "func"] // all value sources should be available when field is not selected yet
+    };
+  }
+
   let widgets = [];
   let valueSrcs = [];
-  if (!field)
-    return {widgets, valueSrcs};
   const isFuncArg = typeof field == "object" && (!!field.func && !!field.arg || field._isFuncArg);
   const fieldConfig = getFieldConfig(config, field);
   const opConfig = operator ? config.operators[operator] : null;

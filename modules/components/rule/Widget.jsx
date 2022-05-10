@@ -43,6 +43,8 @@ export default class Widget extends PureComponent {
     parentFuncs: PropTypes.array,
     // for case_value
     isCaseValue: PropTypes.bool,
+    isLhs: PropTypes.bool,
+    lhsValueType: PropTypes.string,
   };
 
   constructor(props) {
@@ -54,8 +56,9 @@ export default class Widget extends PureComponent {
 
   onPropsChanged(nextProps) {
     const prevProps = this.props;
+    // indicates that meta should be updated also when left-hand side value type changes
     const keysForMeta = [
-      "config", "field", "fieldFunc", "fieldArg", "leftField", "operator", "valueSrc", "isFuncArg", "asyncListValues"
+      "config", "field", "fieldFunc", "fieldArg", "leftField", "operator", "valueSrc", "isFuncArg", "asyncListValues", "lhsValueType"
     ];
     const needUpdateMeta = !this.meta 
           || keysForMeta
@@ -89,7 +92,7 @@ export default class Widget extends PureComponent {
 
   getMeta({
     config, field: simpleField, fieldFunc, fieldArg, operator, valueSrc: valueSrcs, value: values, 
-    isForRuleGruop, isCaseValue, isFuncArg, leftField, asyncListValues
+    isForRuleGruop, isCaseValue, isFuncArg, leftField, asyncListValues, isLhs
   }) {
     const field = isFuncArg ? {func: fieldFunc, arg: fieldArg} : simpleField;
     let iValueSrcs = valueSrcs;
@@ -103,7 +106,7 @@ export default class Widget extends PureComponent {
     const defaultWidget = getWidgetForFieldOp(config, field, operator);
     const _widgets = getWidgetsForFieldOp(config, field, operator);
     const operatorDefinition = isFuncArg ? funcArgDummyOpDef : getOperatorConfig(config, operator, field);
-    if ((fieldDefinition == null || operatorDefinition == null) && !isCaseValue) {
+    if ((fieldDefinition == null || operatorDefinition == null) && !isCaseValue && !isLhs) {
       return null;
     }
     const isSpecialRange = operatorDefinition?.isSpecialRange;
@@ -117,7 +120,7 @@ export default class Widget extends PureComponent {
     const valueSources = getValueSourcesForFieldOp(config, field, operator, fieldDefinition, isFuncArg ? leftField : null);
 
     const widgets = range(0, cardinality).map(delta => {
-      const valueSrc = iValueSrcs.get(delta) || null;
+      const valueSrc = iValueSrcs?.get(delta) || null;
       let widget = getWidgetForFieldOp(config, field, operator, valueSrc);
       let widgetDefinition = getFieldWidgetConfig(config, field, operator, widget, valueSrc);
       if (isSpecialRangeForSrcField) {
@@ -175,7 +178,7 @@ export default class Widget extends PureComponent {
   }
 
   renderWidget = (delta, meta, props) => {
-    const {config, isFuncArg, leftField, operator, value: values, valueError, readonly, parentField, parentFuncs, id, groupId} = props;
+    const {config, isFuncArg, leftField, operator, value: values, valueError, readonly, parentField, parentFuncs, id, groupId, isLhs, lhsValueType} = props;
     const {settings} = config;
     const { widgets, iValues, aField } = meta;
     const value = isFuncArg ? iValues : values;
@@ -205,6 +208,8 @@ export default class Widget extends PureComponent {
           parentFuncs={parentFuncs}
           operator={operator}
           readonly={readonly}
+          isLhs={isLhs}
+          lhsValueType={lhsValueType}
         />
       </div>
     );
@@ -275,8 +280,9 @@ export default class Widget extends PureComponent {
   render() {
     if (!this.meta) return null;
     const { defaultWidget, cardinality } = this.meta;
-    if (!defaultWidget) return null;
-    const name = defaultWidget;
+    if (!defaultWidget && !this.props.isLhs) return null;
+    // TODO PZ: still needed?
+    const name = defaultWidget || 'lhs';
 
     return (
       <Col
