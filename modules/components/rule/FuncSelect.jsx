@@ -48,9 +48,9 @@ export default class FuncSelect extends PureComponent {
     }
   }
 
-  getItems({config, field, operator, parentFuncs, isLhs}) {
+  getItems({config, field, operator, parentFuncs, isLhs, lhsValueType}) {
     const {canUseFuncForField} = config.settings;
-    const filteredFuncs = this.filterFuncs(config, config.funcs, field, operator, canUseFuncForField, parentFuncs, isLhs);
+    const filteredFuncs = this.filterFuncs(config, config.funcs, field, operator, canUseFuncForField, parentFuncs, isLhs, lhsValueType);
     const items = this.buildOptions(config, filteredFuncs);
     return items;
   }
@@ -82,7 +82,7 @@ export default class FuncSelect extends PureComponent {
     };
   }
 
-  filterFuncs(config, funcs, leftFieldFullkey, operator, canUseFuncForField, parentFuncs, isLhs) {
+  filterFuncs(config, funcs, leftFieldFullkey, operator, canUseFuncForField, parentFuncs, isLhs, lhsValueType) {
     funcs = clone(funcs);
     const fieldSeparator = config.settings.fieldSeparator;
     const leftFieldConfig = getFieldConfig(config, leftFieldFullkey);
@@ -92,7 +92,7 @@ export default class FuncSelect extends PureComponent {
       let widgetConfig = config.widgets[widget];
       let widgetType = widgetConfig.type;
       //expectedType = leftFieldConfig.type;
-      expectedType = widgetType;
+      expectedType = widgetType || lhsValueType;
     } else {
       expectedType = leftFieldConfig.type;
     }

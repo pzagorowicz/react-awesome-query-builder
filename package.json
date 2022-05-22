@@ -1,6 +1,6 @@
 {
   "name": "@pzagorowicz/react-awesome-query-builder",
-  "version": "6.0.0-alpha.1",
+  "version": "6.0.0-alpha.2",
   "description": "User-friendly query builder for React. Demo: https://ukrbublik.github.io/react-awesome-query-builder",
   "keywords": [
     "query-builder",

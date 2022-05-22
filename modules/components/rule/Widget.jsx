@@ -106,7 +106,7 @@ export default class Widget extends PureComponent {
     const defaultWidget = getWidgetForFieldOp(config, field, operator);
     const _widgets = getWidgetsForFieldOp(config, field, operator);
     const operatorDefinition = isFuncArg ? funcArgDummyOpDef : getOperatorConfig(config, operator, field);
-    if ((fieldDefinition == null || operatorDefinition == null) && !isCaseValue && !isLhs) {
+    if (operatorDefinition == null && !isCaseValue && !isLhs) {
       return null;
     }
     const isSpecialRange = operatorDefinition?.isSpecialRange;
