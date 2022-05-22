@@ -150,6 +150,11 @@ const createRuleContainer = (Rule) =>
               isLocked={this.props.isLocked}
               isTrueLocked={this.props.isTrueLocked}
               parentReordableNodesCnt={this.props.parentReordableNodesCnt}
+              // lhs
+              lhsValue={this.props.lhsValue || null}
+              lhsValueSrc={this.props.lhsValueSrc || null}
+              lhsValueError={this.props.lhsValueError || null}
+              lhsValueType={this.props.lhsValueType || null}
             /> : null
             ,
             <Rule

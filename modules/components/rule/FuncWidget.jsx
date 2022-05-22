@@ -73,13 +73,13 @@ export default class FuncWidget extends PureComponent {
   };
 
   renderFuncSelect = () => {
-    const {config, field, operator, customProps, value, readonly, parentFuncs, id, groupId, isLhs} = this.props;
+    const {config, field, operator, customProps, value, readonly, parentFuncs, id, groupId, isLhs, lhsValueType} = this.props;
     const funcKey = value && value.get ? value.get("func") : null;
     const selectProps = {
       value: funcKey,
       setValue: this.setFunc,
       config, field, operator, customProps, readonly, parentFuncs,
-      id, groupId, isLhs
+      id, groupId, isLhs, lhsValueType
     };
     const {showLabels, funcLabel} = config.settings;
     const widgetLabel = showLabels

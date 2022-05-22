@@ -179,7 +179,7 @@ class Rule extends PureComponent {
     const { immutableValuesMode } = config.settings;
     if (!showWidget) return null;
 
-    const field = this.getSelectedField() || "Dummy"; // TODO PZ: get rid out of "Dummy"
+    const field = this.getSelectedField() || this.props.selectedField;
 
     const widget = <Widget
       key="values"
